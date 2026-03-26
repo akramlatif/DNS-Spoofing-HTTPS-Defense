@@ -14,7 +14,7 @@ Here is a step-by-step walkthrough on how to upload this entire project—includ
 ## Step 2: Initialize Git Locally
 Open your terminal (Command Prompt, PowerShell, or Git Bash) and navigate to your project folder using this command:
 ```bash
-cd "e:\3rd Semester\DNS Spoofing & HTTPS Defense"
+cd "e:\your-directory\DNS Spoofing & HTTPS Defense"
 ```
 Initialize the Git repository:
 ```bash
