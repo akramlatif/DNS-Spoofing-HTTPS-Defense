@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Spoofed Site — Security Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .warning-bar {
+      background: #d32f2f;
+      color: #fff;
+      text-align: center;
+      padding: 0.75rem;
+      font-size: 0.82rem;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      width: 100%;
+      position: fixed;
+      top: 0;
+    }
+    .container {
+      background: #fff;
+      border: 2px solid #d32f2f;
+      border-radius: 8px;
+      padding: 2.5rem;
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+      margin-top: 3rem;
+      box-shadow: 0 4px 20px rgba(211,47,47,0.15);
+    }
+    .skull { font-size: 3rem; margin-bottom: 1rem; }
+    h1 {
+      color: #b71c1c;
+      font-size: 1.3rem;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      color: #555;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+    .server-info {
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      text-align: left;
+      color: #333;
+    }
+    .server-info .label { color: #757575; }
+    .server-info .value { color: #b71c1c; font-weight: bold; }
+    .lab-badge {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #1b5e20;
+      border: 1px solid #a5d6a7;
+      border-radius: 100px;
+      padding: 0.25rem 1rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="warning-bar">⚠ SIMULATED MALICIOUS PAGE — CYBER SECURITY LAB ONLY ⚠</div>
+  <div class="container">
+    <div class="skull">💀</div>
+    <h1>WARNING: Security Lab — Simulated Site</h1>
+    <p>You have been redirected to the attacker's server.</p>
+    <p>This page is hosted by the attacker machine at <strong>192.168.1.50</strong> and is being served in place of the legitimate <strong>test.local</strong> destination. In a real attack, this page could harvest credentials or deliver malware.</p>
+    <div class="server-info">
+      <div><span class="label">Request URL: </span><span class="value">http://test.local/</span></div>
+      <div><span class="label">Remote Address: </span><span class="value">192.168.1.50:80</span></div>
+      <div><span class="label">Server: </span><span class="value">SimpleHTTP/0.6 Python/3.11.2</span></div>
+      <div><span class="label">Status Code: </span><span class="value">200 OK</span></div>
+    </div>
+    <div class="lab-badge">Lab 4, Project 3 — DNS Spoofing Simulation</div>
+  </div>
+</body>
+</html>

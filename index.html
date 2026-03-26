@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DNS Spoofing Lab | Cyber Security Lab 4 – Project 3</title>
+  <meta name="description" content="Interactive DNS Spoofing Lab with Custom Redirect & Defence. Visualising attack simulation, victim impact, DoH defence implementation and comparative analysis." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🔒</div>
+      <div>
+        <div class="logo-text">DNS_SPOOF.lab</div>
+        <div class="logo-sub">Cyber Security · Lab 4, Project 3 · Instructor: Ishrat Jabeen</div>
+      </div>
+    </div>
+    <div class="badge">● SIMULATION ACTIVE</div>
+  </div>
+</header>
+
+<!-- ===== NAVIGATION ===== -->
+<nav>
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="showSection('topology', this)">
+      <span class="nav-num">01</span>Network Topology
+    </button>
+    <button class="nav-btn" onclick="showSection('attack', this)">
+      <span class="nav-num">02</span>Attack Simulation
+    </button>
+    <button class="nav-btn" onclick="showSection('victim', this)">
+      <span class="nav-num">03</span>Victim Logs
+    </button>
+    <button class="nav-btn" onclick="showSection('defence', this)">
+      <span class="nav-num">04</span>Defence (DoH)
+    </button>
+    <button class="nav-btn" onclick="showSection('comparison', this)">
+      <span class="nav-num">05</span>Comparison Report
+    </button>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- ======================================================
+       SECTION 1: NETWORK TOPOLOGY
+       ====================================================== -->
+  <section class="section active" id="sec-topology">
+    <h1 class="section-title">
+      <span class="sect-num">§1</span>
+      <span class="glitch" data-text="Network Topology">Network Topology</span>
+    </h1>
+    <p class="section-desc">
+      Visual representation of the lab environment. Three machines on a shared LAN segment — Gateway (192.168.1.1),
+      Attacker running Kali Linux (192.168.1.50), and Victim Windows workstation (192.168.1.10).
+    </p>
+
+    <!-- SVG Diagram -->
+    <div id="topology-svg-wrapper" class="scanlines">
+      <svg id="topology-svg" viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00ff41"/>
+          </marker>
+          <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ff4141"/>
+          </marker>
+          <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#41c8ff"/>
+          </marker>
+          <filter id="glow-green">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-red">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Internet cloud -->
+        <ellipse cx="380" cy="45" rx="70" ry="30" fill="rgba(0,100,150,0.15)" stroke="#41c8ff" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+        <text x="380" y="42" class="node-label" fill="#41c8ff" font-size="11">INTERNET</text>
+        <text x="380" y="58" class="node-sub" fill="#41c8ff">8.8.8.8 (DNS)</text>
+
+        <!-- Gateway -->
+        <rect x="300" y="110" width="160" height="60" rx="10" ry="10" fill="rgba(255,215,0,0.08)" stroke="#ffd700" stroke-width="1.5" filter="url(#glow-green)"/>
+        <text x="380" y="136" class="node-label" fill="#ffd700" font-size="12">🔁 Gateway / Router</text>
+        <text x="380" y="154" class="node-sub" fill="#ffd700">192.168.1.1</text>
+
+        <!-- Attacker -->
+        <rect x="60" y="240" width="180" height="80" rx="10" ry="10" fill="rgba(255,65,65,0.08)" stroke="#ff4141" stroke-width="1.5" filter="url(#glow-red)"/>
+        <text x="150" y="268" class="node-label" fill="#ff4141" font-size="12">💀 Attacker</text>
+        <text x="150" y="285" class="node-sub" fill="#ff4141">192.168.1.50 · Kali Linux</text>
+        <text x="150" y="300" class="node-sub" fill="rgba(255,65,65,0.6)">dnsspoof · HTTP Server</text>
+        <text x="150" y="314" class="node-sub" fill="rgba(255,100,100,0.5)">eth0 promiscuous mode</text>
+
+        <!-- Victim -->
+        <rect x="520" y="240" width="180" height="80" rx="10" ry="10" fill="rgba(65,200,255,0.08)" stroke="#41c8ff" stroke-width="1.5"/>
+        <text x="610" y="268" class="node-label" fill="#41c8ff" font-size="12">🖥️ Victim</text>
+        <text x="610" y="285" class="node-sub" fill="#41c8ff">192.168.1.10 · Windows 10</text>
+        <text x="610" y="300" class="node-sub" fill="rgba(65,200,255,0.6)">Browser / test.local</text>
+        <text x="610" y="314" class="node-sub" fill="rgba(100,200,255,0.5)" id="victim-doh-label">Standard DNS (UDP:53)</text>
+
+        <!-- Connections: Internet → Gateway -->
+        <line x1="380" y1="75" x2="380" y2="110" stroke="#41c8ff" stroke-width="1.5" opacity="0.3"/>
+
+        <!-- Gateway → Attacker (LAN) -->
+        <line x1="300" y1="155" x2="240" y2="240" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-dasharray="5 4" class="lan-line-a"/>
+        <!-- Gateway → Victim (LAN) -->
+        <line x1="460" y1="155" x2="520" y2="240" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-dasharray="5 4" class="lan-line-v"/>
+
+        <!-- LAN label -->
+        <text x="380" y="210" class="node-sub" fill="rgba(255,255,255,0.2)" text-anchor="middle" font-size="9">── LAN SEGMENT 192.168.1.0/24 ──</text>
+
+        <!-- Animated packets group -->
+        <g id="packets-group"></g>
+
+        <!-- Status label -->
+        <text id="topo-status" x="380" y="345" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="rgba(0,255,65,0.5)">[ Click a button below to run a simulation ]</text>
+      </svg>
+    </div>
+
+    <div class="topology-controls">
+      <button class="btn btn-danger" id="btn-run-attack" onclick="runAttackAnimation()">▶ Simulate DNS Spoofing Attack</button>
+      <button class="btn btn-blue" id="btn-doh-defence" onclick="runDoHAnimation()">🔒 Enable DoH Defence</button>
+      <button class="btn btn-outline" onclick="resetTopology()">↺ Reset</button>
+    </div>
+
+    <!-- Machine Cards -->
+    <div class="machine-cards">
+      <div class="machine-card attacker">
+        <div class="machine-name">💀 Attacker Machine</div>
+        <div class="machine-detail">
+          IP: <span>192.168.1.50</span><br>
+          OS: <span>Kali Linux</span><br>
+          Tools: <span>dnsspoof, python3 http.server</span><br>
+          Interface: <span>eth0 (promiscuous)</span>
+        </div>
+      </div>
+      <div class="machine-card victim">
+        <div class="machine-name">🖥️ Victim Machine</div>
+        <div class="machine-detail">
+          IP: <span>192.168.1.10</span><br>
+          OS: <span>Windows 10</span><br>
+          Role: <span>Target Workstation</span><br>
+          Target: <span>test.local</span>
+        </div>
+      </div>
+      <div class="machine-card gateway">
+        <div class="machine-name">🔁 Gateway / Router</div>
+        <div class="machine-detail">
+          IP: <span>192.168.1.1</span><br>
+          Role: <span>Network Gateway</span><br>
+          Upstream DNS: <span>8.8.8.8</span><br>
+          Firmware: <span>Router OS</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ======================================================
+       SECTION 2: ATTACK SIMULATION
+       ====================================================== -->
+  <section class="section" id="sec-attack">
+    <h1 class="section-title">
+      <span class="sect-num">§2</span> Simulated Attack Logs
+    </h1>
+    <p class="section-desc">
+      Step-by-step replay of the attacker's actions on Kali Linux (192.168.1.50):
+      crafting the spoof table, hosting the malicious webpage, and executing the dnsspoof attack.
+    </p>
+
+    <div class="card card-red" style="margin-bottom: 1.5rem;">
+      <div class="flex-row" style="margin-bottom: 1rem;">
+        <span class="info-badge red">⚠ ATTACK PHASE</span>
+        <span class="info-badge yellow">Attacker: 192.168.1.50</span>
+      </div>
+
+      <!-- Step 1 Terminal -->
+      <p style="font-family: var(--font-code); font-size:0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform:uppercase; letter-spacing:0.1em;">Step 1 — Create DNS Spoof Table</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+          <span class="terminal-label">attacker@kali:~$ — bash</span>
+        </div>
+        <div class="terminal-body" id="term-attack-1">&nbsp;</div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Step 2 Terminal -->
+      <p style="font-family: var(--font-code); font-size:0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform:uppercase; letter-spacing:0.1em;">Step 2 — Host Malicious Webpage</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+          <span class="terminal-label">attacker@kali:~/web_root$ — bash</span>
+        </div>
+        <div class="terminal-body" id="term-attack-2">&nbsp;</div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Step 3 Terminal -->
+      <p style="font-family: var(--font-code); font-size:0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform:uppercase; letter-spacing:0.1em;">Step 3 — Execute dnsspoof &amp; HTTP Server Logs</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+          <span class="terminal-label">attacker@kali:~$ — dnsspoof [LIVE]</span>
+        </div>
+        <div class="terminal-body" id="term-attack-3">&nbsp;</div>
+      </div>
+    </div>
+
+    <!-- Spoofed page preview -->
+    <div class="card" id="spoofed-preview" style="display:none;">
+      <div class="flex-row" style="margin-bottom:1rem;">
+        <span class="info-badge red">VICTIM BROWSER VIEW</span>
+        <span class="info-badge yellow">http://test.local/</span>
+      </div>
+      <iframe src="spoofed_page/index.html" style="width:100%; height:280px; border: 1px solid rgba(255,65,65,0.3); border-radius: 8px; background:#fff;"
+              title="Simulated spoofed webpage shown to victim"></iframe>
+    </div>
+
+    <div class="flex-row" style="margin-top:1.5rem;">
+      <button class="btn btn-danger" id="btn-play-attack" onclick="playAttackLogs()">▶ Play Attack Logs</button>
+      <button class="btn btn-outline" onclick="resetAttack()">↺ Reset</button>
+    </div>
+  </section>
+
+
+  <!-- ======================================================
+       SECTION 3: VICTIM LOGS
+       ====================================================== -->
+  <section class="section" id="sec-victim">
+    <h1 class="section-title">
+      <span class="sect-num">§3</span> Simulated Victim Logs
+    </h1>
+    <p class="section-desc">
+      Logs from the Victim machine (192.168.1.10 / Windows 10) showing how the DNS spoofing attack
+      manifested: the ping command resolving to the attacker's IP, and the browser dev tools confirming connection to the malicious server.
+    </p>
+
+    <div class="card-grid card-grid-2" style="margin-bottom: 1.5rem;">
+
+      <!-- Ping log -->
+      <div class="card card-blue">
+        <div class="flex-row" style="margin-bottom:1rem;">
+          <span class="info-badge red">BEFORE DEFENCE</span>
+          <span class="info-badge blue">cmd.exe ping</span>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+            <span class="terminal-label">C:\Users\victim — Command Prompt</span>
+          </div>
+          <div class="terminal-body" id="term-victim-ping">&nbsp;</div>
+        </div>
+      </div>
+
+      <!-- Browser console log -->
+      <div class="card card-blue">
+        <div class="flex-row" style="margin-bottom:1rem;">
+          <span class="info-badge red">BEFORE DEFENCE</span>
+          <span class="info-badge blue">Browser – Network Tab</span>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+            <span class="terminal-label">Chrome DevTools — Network</span>
+          </div>
+          <div class="terminal-body" id="term-victim-browser">&nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Observation callout -->
+    <div class="card" id="victim-obs" style="display:none; border-color: rgba(255,65,65,0.4); background: rgba(15,5,5,0.9);">
+      <p style="font-family:var(--font-code); font-size:0.82rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.75rem;">⚠ Observation</p>
+      <p style="font-size:0.9rem; line-height:1.8; color:var(--text-primary);">
+        The victim successfully connected to the attacker's server at
+        <mark class="red">192.168.1.50</mark> instead of the legitimate destination.
+        The DNS spoofing attack was <mark class="red">successful</mark> — the operating system cached the malicious mapping,
+        directing all subsequent connections to <code style="font-family:var(--font-code); color:var(--red-accent);">test.local</code>
+        to the attacker's web server.
+      </p>
+    </div>
+
+    <div class="flex-row" style="margin-top:1.5rem;">
+      <button class="btn btn-blue" id="btn-play-victim" onclick="playVictimLogs()">▶ View Victim Logs</button>
+      <button class="btn btn-outline" onclick="resetVictim()">↺ Reset</button>
+    </div>
+  </section>
+
+
+  <!-- ======================================================
+       SECTION 4: DEFENCE IMPLEMENTATION
+       ====================================================== -->
+  <section class="section" id="sec-defence">
+    <h1 class="section-title">
+      <span class="sect-num">§4</span> Defence Implementation
+    </h1>
+    <p class="section-desc">
+      Configure DNS-over-HTTPS (DoH) on the victim's browser to encrypt DNS queries and
+      bypass local network DNS spoofing. Follow the steps below for your browser of choice.
+    </p>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="flex-row" style="margin-bottom:1.5rem;">
+        <span class="info-badge green">OBJECTIVE</span>
+        <span style="font-size:0.88rem; color:var(--text-primary);">
+          Move DNS resolution from plaintext UDP port 53 → encrypted HTTPS port 443
+        </span>
+      </div>
+
+      <!-- Browser Tabs -->
+      <div class="tab-header">
+        <button class="tab-btn active" onclick="showTab('chrome', this)">🌐 Google Chrome</button>
+        <button class="tab-btn" onclick="showTab('firefox', this)">🦊 Mozilla Firefox</button>
+      </div>
+
+      <!-- Chrome Steps -->
+      <div class="tab-panel active" id="tab-chrome">
+        <ul class="step-list" id="chrome-steps">
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">1</div>
+            <div class="step-text">
+              Open Chrome and navigate to:<br>
+              <strong>Settings</strong> → <strong>Privacy and Security</strong> → <strong>Security</strong>
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">2</div>
+            <div class="step-text">
+              Scroll down to the <strong>Advanced</strong> section.
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">3</div>
+            <div class="step-text">
+              Locate <strong>"Use secure DNS"</strong> and toggle it <mark>ON</mark>.
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">4</div>
+            <div class="step-text">
+              Select <strong>"Cloudflare (1.1.1.1)"</strong> or <strong>"Google (Public DNS)"</strong> from the dropdown menu.
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">5</div>
+            <div class="step-text">
+              Restart the browser to apply changes. ✅
+            </div>
+          </li>
+        </ul>
+        <div class="spacer-sm"></div>
+        <button class="btn btn-primary" style="font-size:0.75rem;" onclick="checkAllSteps('chrome-steps')">✓ Mark All Complete</button>
+        <button class="btn btn-outline" style="font-size:0.75rem;" onclick="resetSteps('chrome-steps')">↺ Reset Steps</button>
+      </div>
+
+      <!-- Firefox Steps -->
+      <div class="tab-panel" id="tab-firefox">
+        <ul class="step-list" id="firefox-steps">
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">1</div>
+            <div class="step-text">
+              Open Firefox and navigate to:<br>
+              <strong>Settings</strong> → <strong>General</strong> → <strong>Network Settings</strong> → <strong>Settings…</strong>
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">2</div>
+            <div class="step-text">
+              Scroll to the bottom of the Connection Settings dialog.
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">3</div>
+            <div class="step-text">
+              Check the box for <strong>"Enable DNS over HTTPS"</strong>.
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">4</div>
+            <div class="step-text">
+              Select a provider:<br>
+              • Cloudflare: <code>https://mozilla.cloudflare-dns.com/dns-query</code><br>
+              • Google: <code>https://dns.google/dns-query</code>
+            </div>
+          </li>
+          <li class="step-item" onclick="toggleStep(this)">
+            <div class="step-check">5</div>
+            <div class="step-text">
+              Click <strong>OK</strong> and restart Firefox to apply. ✅
+            </div>
+          </li>
+        </ul>
+        <div class="spacer-sm"></div>
+        <button class="btn btn-primary" style="font-size:0.75rem;" onclick="checkAllSteps('firefox-steps')">✓ Mark All Complete</button>
+        <button class="btn btn-outline" style="font-size:0.75rem;" onclick="resetSteps('firefox-steps')">↺ Reset Steps</button>
+      </div>
+    </div>
+
+    <!-- Verification Result -->
+    <div class="card card-grid card-grid-2">
+      <div>
+        <p style="font-family:var(--font-code); font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">
+          4.3 Verification — Visit: <code style="color:var(--blue-accent);">https://1.1.1.1/help</code>
+        </p>
+        <div class="verify-table">
+          <div class="verify-row">
+            <span class="verify-label">Connected to 1.1.1.1</span>
+            <span class="verify-value">Yes ✓</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Using DNS over HTTPS (DoH)</span>
+            <span class="verify-value">Yes ✓</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Using DNS over TLS (DoT)</span>
+            <span class="verify-value no">No ✗</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p style="font-family:var(--font-code); font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">
+          How DoH Works
+        </p>
+        <div class="terminal" style="font-size:0.75rem;">
+          <div class="terminal-bar">
+            <div class="t-dot green"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+            <span class="terminal-label">DNS Query Flow — With DoH</span>
+          </div>
+          <div class="terminal-body" style="line-height:1.9; min-height:120px;">
+<span class="output">Browser wants to resolve: test.local</span>
+<span class="prompt">↓ Query encrypted in TLS 1.3</span>
+<span class="info">→ HTTPS POST to cloudflare-dns.com</span>
+<span class="info">   port 443 (encrypted)</span>
+<span class="success">✓ Attacker sees only HTTPS noise</span>
+<span class="success">✓ Spoofing attempt: FAILED</span>
+<span class="success">✓ dnsspoof: 0 pattern matches</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ======================================================
+       SECTION 5: COMPARISON REPORT
+       ====================================================== -->
+  <section class="section" id="sec-comparison">
+    <h1 class="section-title">
+      <span class="sect-num">§5</span> Comparison Report
+    </h1>
+    <p class="section-desc">
+      Before Defence vs. After Defence — Technical analysis of DNS-over-HTTPS efficacy
+      against local-area network DNS spoofing attacks.
+    </p>
+
+    <!-- Executive Summary -->
+    <div class="analysis-block" style="margin-bottom:1.5rem; border-color:var(--border-green);">
+      <h4>Executive Summary</h4>
+      This report analyzes the efficacy of DNS-over-HTTPS (DoH) in mitigating local-area network (LAN) DNS spoofing attacks.
+      In the <mark class="red">"Before"</mark> scenario, the network relied on traditional
+      <strong style="color:var(--red-accent)">plaintext DNS (UDP Port 53)</strong>.
+      In the <mark>"After"</mark> scenario, <strong style="color:var(--green-bright)">cryptographic encapsulation via HTTPS (TCP Port 443)</strong>
+      was implemented at the application layer.
+    </div>
+
+    <!-- Toggle -->
+    <div class="comparison-toggle">
+      <button class="comp-btn active red" id="comp-before" onclick="showComparison('before')">⚠ Before Defence</button>
+      <button class="comp-btn" id="comp-after" onclick="showComparison('after')">✓ After Defence</button>
+    </div>
+
+    <!-- Before Panel -->
+    <div id="panel-before">
+      <div class="analysis-block danger" style="border-color:rgba(255,65,65,0.3); background:rgba(15,5,5,0.9); margin-bottom:1.5rem;">
+        <h4>Technical Analysis: Before Defence</h4>
+        During the initial phase, the Attacker utilised the <code style="font-family:var(--font-code); color:var(--red-accent);">dnsspoof</code>
+        tool from the <em>dsniff</em> package to monitor the local network segment for DNS queries.
+        Because standard DNS queries are transmitted as <strong>unencrypted UDP packets</strong> and lack any form of authentication
+        or integrity verification, the attacker was able to perform a classic <mark class="red">"race condition"</mark> attack.
+        <br><br>
+        When the Victim initiated a DNS query for <code style="font-family:var(--font-code); color:var(--red-accent)">test.local</code>,
+        the request was broadcast toward the upstream DNS resolver (8.8.8.8). The Attacker, running in promiscuous mode, observed this query
+        in real-time and injected a forged response with IP <mark class="red">192.168.1.50</mark> before the legitimate reply arrived.
+        The Victim accepted the first response, cached the malicious mapping, and loaded the attacker's webpage.
+      </div>
+
+      <div class="terminal" style="margin-bottom:1.5rem;">
+        <div class="terminal-bar">
+          <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+          <span class="terminal-label">BEFORE DEFENCE — DNS Flow (Plaintext UDP:53)</span>
+        </div>
+        <div class="terminal-body" style="line-height:2; min-height:130px;">
+<span class="prompt">victim@win:</span><span class="cmd">~$ ping test.local</span>
+<span class="output">DNS query sent → 192.168.1.1 (UDP port 53)</span>
+<span class="error">Attacker intercepts query in promiscuous mode</span>
+<span class="error">dnsspoof injects forged response: test.local → 192.168.1.50</span>
+<span class="warn">Victim caches malicious DNS response</span>
+<span class="error">Pinging test.local [192.168.1.50] ← ATTACKER'S IP!</span>
+<span class="error">HTTP 200 OK from malicious server</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- After Panel -->
+    <div id="panel-after" style="display:none;">
+      <div class="analysis-block" style="border-color:rgba(0,255,65,0.3); margin-bottom:1.5rem;">
+        <h4>Technical Analysis: After Defence</h4>
+        Upon enabling DNS-over-HTTPS in the browser, the Victim fundamentally altered its DNS resolution behaviour.
+        Instead of broadcasting plaintext UDP queries to the local network's default gateway, the browser established
+        an <strong>encrypted TLS 1.3 tunnel</strong> directly to a trusted remote resolver (Cloudflare's 1.1.1.1 service).
+        <br><br>
+        The query was encapsulated within an HTTPS POST request to
+        <code style="font-family:var(--font-code); color:var(--green-bright)">https://cloudflare-dns.com/dns-query</code>,
+        traveling over <mark>TCP port 443</mark>, encrypted with the same cryptographic protections used for secure web browsing.
+        The <code style="font-family:var(--font-code); color:var(--green-bright)">dnsspoof</code> tool reported
+        <mark>zero pattern matches</mark> — no plaintext DNS traffic traversed the network.
+      </div>
+
+        <div class="terminal" style="margin-bottom:1.5rem;">
+          <div class="terminal-bar">
+            <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+            <span class="terminal-label">AFTER DEFENCE — DNS Flow (HTTPS/TLS 1.3 port 443)</span>
+          </div>
+          <div class="terminal-body" style="line-height:2; min-height:130px;">
+<span class="prompt">victim@win:</span><span class="cmd">~$ ping test.local</span>
+<span class="output">DoH query → HTTPS POST to cloudflare-dns.com:443</span>
+<span class="output">TLS 1.3 encrypted tunnel established</span>
+<span class="success">Attacker sees: encrypted HTTPS traffic only</span>
+<span class="success">dnsspoof: 0 pattern matches (no UDP port 53 queries)</span>
+<span class="success">Cloudflare returns: NXDOMAIN (test.local doesn't exist)</span>
+<span class="success">DNS Spoofing: BLOCKED ✓</span>
+          </div>
+        </div>
+    </div>
+
+    <!-- Why Defence Was Effective -->
+    <p style="font-family:var(--font-code); font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">
+      Why the Defence Was Effective — Three Technical Factors
+    </p>
+    <div class="factor-grid" style="margin-bottom:2rem;">
+      <div class="factor-card">
+        <div class="factor-icon">🔐</div>
+        <div class="factor-title">Encryption</div>
+        <div class="factor-desc">
+          The attacker could no longer observe DNS request contents.
+          Domain names are encrypted within the TLS payload. Network capture reveals only encrypted HTTPS traffic.
+        </div>
+      </div>
+      <div class="factor-card">
+        <div class="factor-icon">🛡️</div>
+        <div class="factor-title">Integrity Protection</div>
+        <div class="factor-desc">
+          TLS provides cryptographic message authentication through HMAC verification.
+          Injected malicious data would be detected via MAC failures, terminating the connection.
+        </div>
+      </div>
+      <div class="factor-card">
+        <div class="factor-icon">🌐</div>
+        <div class="factor-title">Trust Boundary Relocation</div>
+        <div class="factor-desc">
+          DoH bypasses the local router's DNS configuration, moving the trust boundary from the untrusted LAN
+          to a known, authenticated secure endpoint.
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparative Results Table -->
+    <div class="card" style="margin-bottom:2rem; padding:0; overflow:hidden;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>⚠ Before Defence</th>
+            <th>✓ After Defence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="metric">DNS Protocol</td>
+            <td class="before">UDP (Plaintext)</td>
+            <td class="after">HTTPS (Encrypted)</td>
+          </tr>
+          <tr>
+            <td class="metric">Port Used</td>
+            <td class="before">53</td>
+            <td class="after">443</td>
+          </tr>
+          <tr>
+            <td class="metric">Attacker Visibility</td>
+            <td class="before">Full query content</td>
+            <td class="after">Encrypted traffic only</td>
+          </tr>
+          <tr>
+            <td class="metric">Spoofing Successful</td>
+            <td class="before">Yes</td>
+            <td class="after">No</td>
+          </tr>
+          <tr>
+            <td class="metric">Resolution of test.local</td>
+            <td class="before">192.168.1.50 (Spoofed)</td>
+            <td class="after">NXDOMAIN or Legitimate IP</td>
+          </tr>
+          <tr>
+            <td class="metric">Data Integrity</td>
+            <td class="before">None</td>
+            <td class="after">TLS MAC Verification</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Conclusion -->
+    <div class="analysis-block" style="border-color:var(--border-green); margin-bottom:2rem;">
+      <h4>Conclusion</h4>
+      The implementation of DNS-over-HTTPS represents an effective application-layer defence against local network DNS spoofing attacks.
+      By encrypting queries and authenticating responses through TLS, DoH eliminates the attacker's ability to <strong>observe</strong>,
+      <strong>intercept</strong>, or <strong>modify</strong> DNS traffic.
+      Organizations and individual users should consider enabling DoH as a baseline security measure, particularly when operating on
+      <mark>untrusted network segments</mark> such as public Wi-Fi or shared corporate networks.
+    </div>
+
+    <!-- References -->
+    <div class="card">
+      <p style="font-family:var(--font-code); font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">
+        References
+      </p>
+      <ul class="ref-list">
+        <li class="ref-item"><span class="ref-num">1</span>RFC 8484 — DNS Queries over HTTPS (DoH)</li>
+        <li class="ref-item"><span class="ref-num">2</span>Cloudflare DNS Documentation — https://developers.cloudflare.com/1.1.1.1/</li>
+        <li class="ref-item"><span class="ref-num">3</span>Mozilla Firefox DoH Implementation Guide</li>
+        <li class="ref-item"><span class="ref-num">4</span>OWASP DNS Spoofing Prevention Guidelines</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <span>Document prepared for Lab 4, Project 3</span> ·
+  <span>Instructor: Ishrat Jabeen</span> ·
+  <span>Date: March 25, 2026</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

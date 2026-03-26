@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DNS Spoofing Lab Report — Lab 4, Project 3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700;800&display=swap');
+
+:root{
+  --green:#00c832;--green-bright:#00ff41;--red:#e53935;--blue:#1e88e5;
+  --dark:#0a0f0a;--card:#fff;--border:#e0e0e0;--text:#1a1a1a;--muted:#666;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:#f4f7f4;color:var(--text);font-size:15px;line-height:1.7;}
+
+/* ── COVER ── */
+.cover{
+  background:linear-gradient(135deg,#050a05 0%,#0d1f0d 60%,#051020 100%);
+  color:#fff;padding:80px 60px 60px;position:relative;overflow:hidden;
+  page-break-after:always;
+}
+.cover::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,255,65,.04) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,255,65,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.cover-glow{position:absolute;top:-150px;left:50%;transform:translateX(-50%);
+  width:700px;height:400px;background:radial-gradient(ellipse,rgba(0,255,65,.12) 0%,transparent 70%);}
+.cover-inner{position:relative;z-index:1;max-width:860px;margin:0 auto;}
+.cover-badge{display:inline-flex;align-items:center;gap:.4em;
+  font-family:'JetBrains Mono',monospace;font-size:.75rem;letter-spacing:.1em;
+  color:var(--green-bright);border:1px solid rgba(0,255,65,.3);
+  padding:.3em 1em;border-radius:100px;background:rgba(0,255,65,.08);margin-bottom:2rem;}
+.cover h1{font-size:3rem;font-weight:800;line-height:1.15;margin-bottom:1rem;
+  background:linear-gradient(135deg,#fff 40%,var(--green-bright));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.cover-sub{font-size:1.1rem;color:rgba(255,255,255,.6);margin-bottom:2.5rem;max-width:600px;}
+.cover-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;
+  border-top:1px solid rgba(0,255,65,.15);padding-top:2rem;}
+.meta-item label{font-family:'JetBrains Mono',monospace;font-size:.7rem;
+  letter-spacing:.1em;color:rgba(0,255,65,.6);text-transform:uppercase;display:block;margin-bottom:.3rem;}
+.meta-item span{font-size:.95rem;color:rgba(255,255,255,.85);font-weight:600;}
+
+/* ── PAGE LAYOUT ── */
+.page{max-width:960px;margin:0 auto;padding:40px 30px;}
+
+/* ── TOC ── */
+.toc{background:#fff;border-radius:12px;border:1px solid var(--border);
+  padding:2rem;margin-bottom:2rem;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.toc h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;color:var(--green);
+  font-family:'JetBrains Mono',monospace;margin-bottom:1rem;}
+.toc ol{padding-left:1.5rem;}
+.toc li{padding:.3rem 0;border-bottom:1px dashed #eee;}
+.toc li:last-child{border:none;}
+.toc a{color:var(--text);text-decoration:none;font-weight:500;}
+.toc a:hover{color:var(--green);}
+
+/* ── SECTION HEADERS ── */
+.section-header{
+  background:linear-gradient(135deg,#050a05,#0d1f0d);
+  border-radius:12px;padding:1.5rem 2rem;margin:2.5rem 0 1.5rem;color:#fff;
+  display:flex;align-items:center;gap:1rem;
+}
+.sect-num{font-family:'JetBrains Mono',monospace;font-size:.75rem;
+  background:rgba(0,255,65,.15);border:1px solid rgba(0,255,65,.3);
+  color:var(--green-bright);padding:.2em .7em;border-radius:4px;}
+.section-header h2{font-size:1.3rem;font-weight:700;color:var(--green-bright);}
+
+h3{font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 .75rem;
+   border-left:3px solid var(--green);padding-left:.75rem;}
+p{margin-bottom:1rem;color:#333;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);
+  padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05);}
+
+/* ── NETWORK TABLE ── */
+.net-table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1rem 0;}
+.net-table th{background:#f0faf0;color:var(--green);font-family:'JetBrains Mono',monospace;
+  font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--green);}
+.net-table td{padding:.75rem 1rem;border-bottom:1px solid #eee;vertical-align:top;}
+.net-table tr:last-child td{border-bottom:none;}
+.net-table tr:hover td{background:#f9fdf9;}
+.badge{display:inline-block;font-size:.72rem;font-family:'JetBrains Mono',monospace;
+  padding:.15em .6em;border-radius:4px;font-weight:600;}
+.badge-red{background:#fff0f0;color:var(--red);border:1px solid #fcc;}
+.badge-blue{background:#f0f5ff;color:var(--blue);border:1px solid #c5d7f7;}
+.badge-yellow{background:#fffbf0;color:#e65100;border:1px solid #ffd180;}
+
+/* ── COMPARISON TABLE ── */
+.comp-table{width:100%;border-collapse:collapse;font-size:.87rem;border-radius:10px;overflow:hidden;}
+.comp-table thead tr{background:linear-gradient(135deg,#050a05,#0d1f0d);}
+.comp-table th{padding:.9rem 1.1rem;text-align:left;font-family:'JetBrains Mono',monospace;
+  font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;}
+.comp-table th:first-child{color:rgba(255,255,255,.6);}
+.comp-table th:nth-child(2){color:#ff6b6b;}
+.comp-table th:nth-child(3){color:var(--green-bright);}
+.comp-table td{padding:.85rem 1.1rem;border-bottom:1px solid #eee;}
+.comp-table tr:last-child td{border-bottom:none;}
+.comp-table tr:hover td{background:#f9fdf9;}
+.comp-table .metric{color:var(--muted);font-size:.82rem;font-family:'JetBrains Mono',monospace;}
+.comp-table .before{color:var(--red);font-weight:600;}
+.comp-table .after{color:var(--green);font-weight:600;}
+
+/* ── SCREENSHOTS ── */
+.screenshot{
+  width:100%;border-radius:10px;border:1px solid var(--border);
+  box-shadow:0 4px 20px rgba(0,0,0,.12);display:block;margin:.75rem 0;
+}
+.screenshot-caption{font-size:.8rem;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  text-align:center;margin-bottom:1.5rem;}
+.screenshot-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0;}
+.screenshot-grid .shot{display:flex;flex-direction:column;}
+.screenshot-grid img{border-radius:8px;border:1px solid var(--border);
+  box-shadow:0 2px 10px rgba(0,0,0,.1);width:100%;}
+.screenshot-grid .shot-caption{font-size:.72rem;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;text-align:center;margin-top:.3rem;}
+
+/* ── INFO CALLOUTS ── */
+.callout{border-radius:10px;padding:1.25rem 1.5rem;margin:1rem 0;border-left:4px solid;}
+.callout-green{background:#f0faf0;border-left-color:var(--green);}
+.callout-red{background:#fff5f5;border-left-color:var(--red);}
+.callout-blue{background:#f0f5ff;border-left-color:var(--blue);}
+.callout h4{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;
+  font-family:'JetBrains Mono',monospace;}
+.callout-green h4{color:var(--green);}
+.callout-red h4{color:var(--red);}
+.callout-blue h4{color:var(--blue);}
+
+/* ── FACTOR CARDS ── */
+.factor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1rem 0;}
+.factor-card{background:#fff;border:1px solid var(--border);border-radius:10px;
+  padding:1.25rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.factor-icon{font-size:1.8rem;margin-bottom:.5rem;}
+.factor-title{font-family:'JetBrains Mono',monospace;font-size:.82rem;
+  color:var(--green);font-weight:700;margin-bottom:.4rem;}
+.factor-desc{font-size:.82rem;color:var(--muted);line-height:1.6;}
+
+/* ── STEPS ── */
+.steps{list-style:none;margin:1rem 0;}
+.step{display:flex;gap:.75rem;align-items:flex-start;padding:.6rem 0;
+  border-bottom:1px dashed #eee;}
+.step:last-child{border:none;}
+.step-num{min-width:24px;height:24px;border-radius:50%;background:var(--green);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;margin-top:.1rem;}
+.step-text{font-size:.88rem;line-height:1.7;}
+.step-text code{background:#f0faf0;border:1px solid #d4edda;border-radius:4px;
+  padding:.1em .4em;font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--green);}
+
+/* ── VERIFY TABLE ── */
+.verify-table{width:100%;border-collapse:collapse;font-size:.87rem;}
+.verify-table th{background:#f0faf0;padding:.7rem 1rem;text-align:left;
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--green);border-bottom:1px solid #d4edda;}
+.verify-table td{padding:.7rem 1rem;border-bottom:1px solid #eee;}
+.verify-table td.yes{color:var(--green);font-weight:700;}
+.verify-table td.no{color:var(--red);font-weight:700;}
+
+/* ── REFS ── */
+.ref-list{list-style:none;margin:1rem 0;}
+.ref-item{display:flex;gap:.75rem;align-items:flex-start;padding:.6rem 0;
+  border-bottom:1px dashed #eee;font-size:.88rem;color:var(--muted);}
+.ref-item:last-child{border:none;}
+.ref-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;background:#f0faf0;
+  color:var(--green);border:1px solid #d4edda;border-radius:4px;
+  padding:.1em .5em;min-width:26px;text-align:center;}
+
+/* ── CONCLUSION BOX ── */
+.conclusion{
+  background:linear-gradient(135deg,#f0faf0,#e8f5e9);
+  border:1px solid #c8e6c9;border-radius:12px;padding:2rem;margin:2rem 0;
+}
+.conclusion h3{border-left-color:var(--green);color:var(--green);margin-top:0;}
+
+/* ── FOOTER ── */
+.report-footer{
+  background:#050a05;color:rgba(255,255,255,.4);
+  text-align:center;padding:2rem;font-family:'JetBrains Mono',monospace;
+  font-size:.75rem;letter-spacing:.05em;margin-top:3rem;
+}
+
+/* ── PRINT ── */
+@media print{
+  .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .section-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .page{padding:20px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ COVER PAGE ══════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-glow"></div>
+  <div class="cover-inner">
+    <div class="cover-badge">● CYBER SECURITY LAB 4 · PROJECT 3</div>
+    <h1>DNS Spoofing Lab with<br>Custom Redirect &amp; Defence</h1>
+    <p class="cover-sub">
+      A comprehensive study of DNS cache poisoning using <code style="font-family:'JetBrains Mono',monospace;color:#00ff41;font-size:.9em;">dnsspoof</code>,
+      its impact on an unprotected victim, and mitigation through DNS-over-HTTPS (DoH).
+    </p>
+    <div class="cover-meta">
+      <div class="meta-item">
+        <label>Instructor</label>
+        <span>Ishrat Jabeen</span>
+      </div>
+      <div class="meta-item">
+        <label>Date</label>
+        <span>March 25, 2026</span>
+      </div>
+      <div class="meta-item">
+        <label>Lab / Project</label>
+        <span>Lab 4 · Project 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#s1">Network Topology</a></li>
+      <li><a href="#s2">Simulated Attack Logs</a></li>
+      <li><a href="#s3">Simulated Victim Logs</a></li>
+      <li><a href="#s4">Defence Implementation (DoH)</a></li>
+      <li><a href="#s5">Comparison Report: Before vs After Defence</a></li>
+      <li><a href="#conclusion">Conclusion</a></li>
+      <li><a href="#refs">References</a></li>
+    </ol>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       §1  NETWORK TOPOLOGY
+  ───────────────────────────────────────────── -->
+  <div id="s1" class="section-header">
+    <span class="sect-num">§1</span>
+    <h2>Network Topology</h2>
+  </div>
+
+  <div class="card">
+    <p>
+      The lab environment consists of three machines placed on a shared LAN segment (192.168.1.0/24).
+      The attacker machine runs Kali Linux and uses the <code style="font-family:'JetBrains Mono',monospace;font-size:.88em;">dnsspoof</code>
+      tool from the <em>dsniff</em> suite to intercept plaintext DNS queries. The victim is a standard Windows 10
+      workstation making a name resolution request for <code style="font-family:'JetBrains Mono',monospace;font-size:.88em;">test.local</code>.
+    </p>
+
+    <h3>Machine Configuration</h3>
+    <table class="net-table">
+      <thead><tr><th>Machine</th><th>IP Address</th><th>OS</th><th>Role</th><th>Tools</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Attacker</strong></td>
+          <td><code style="font-family:'JetBrains Mono',monospace;">192.168.1.50</code></td>
+          <td><span class="badge badge-red">Kali Linux</span></td>
+          <td>DNS Spoofing, Web Hosting</td>
+          <td><code style="font-family:'JetBrains Mono',monospace;font-size:.82em;">dnsspoof, python3 http.server</code></td>
+        </tr>
+        <tr>
+          <td><strong>Victim</strong></td>
+          <td><code style="font-family:'JetBrains Mono',monospace;">192.168.1.10</code></td>
+          <td><span class="badge badge-blue">Windows 10</span></td>
+          <td>Target Workstation</td>
+          <td><code style="font-family:'JetBrains Mono',monospace;font-size:.82em;">Browser, ping</code></td>
+        </tr>
+        <tr>
+          <td><strong>Gateway</strong></td>
+          <td><code style="font-family:'JetBrains Mono',monospace;">192.168.1.1</code></td>
+          <td><span class="badge badge-yellow">Router Firmware</span></td>
+          <td>Network Gateway</td>
+          <td>Upstream DNS: 8.8.8.8</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Interactive Topology Diagram — Initial View</h3>
+  <img class="screenshot" src="report_assets/s1_topology.png" alt="Network topology diagram showing Attacker, Victim, Gateway and Internet nodes"/>
+  <div class="screenshot-caption">Fig 1.1 — Network topology SVG showing LAN segment, node roles and connection paths</div>
+
+  <div class="screenshot-grid">
+    <div class="shot">
+      <img src="report_assets/s1_attack.png" alt="Attack animation running"/>
+      <div class="shot-caption">Fig 1.2 — DNS spoofing packet animation (attack mode)</div>
+    </div>
+    <div class="shot">
+      <img src="report_assets/s1_doh.png" alt="DoH defence animation running"/>
+      <div class="shot-caption">Fig 1.3 — DoH defence animation (encrypted bypass)</div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       §2  ATTACK SIMULATION
+  ───────────────────────────────────────────── -->
+  <div id="s2" class="section-header">
+    <span class="sect-num">§2</span>
+    <h2>Simulated Attack Logs — Attacker Machine (192.168.1.50)</h2>
+  </div>
+
+  <div class="card">
+    <p>
+      The attack follows three sequential steps, executed on the attacker's Kali Linux machine
+      operating on the same LAN segment as the victim.
+    </p>
+
+    <h3>Step 1 — Create DNS Spoof Table</h3>
+    <div class="callout callout-red">
+      <h4>Command</h4>
+      <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem;">echo "192.168.1.50&nbsp;&nbsp;test.local" &gt; spoof_hosts.txt</code><br><br>
+      <p style="margin:0;font-size:.88rem;">
+        Creates a mapping file that instructs <code style="font-family:'JetBrains Mono',monospace;">dnsspoof</code>
+        to respond to any DNS query for <strong>test.local</strong> with the attacker's IP <strong>192.168.1.50</strong>.
+      </p>
+    </div>
+
+    <h3>Step 2 — Host a Malicious Webpage</h3>
+    <div class="callout callout-red">
+      <h4>Commands</h4>
+      <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem;">
+        mkdir web_root &amp;&amp; cd web_root<br>
+        python3 -m http.server 80
+      </code><br><br>
+      <p style="margin:0;font-size:.88rem;">
+        Hosts a custom HTML page on port 80. When the victim resolves <strong>test.local</strong> to
+        <strong>192.168.1.50</strong>, their browser loads this malicious page.
+      </p>
+    </div>
+
+    <h3>Step 3 — Execute the DNS Spoofing Attack</h3>
+    <div class="callout callout-red">
+      <h4>Command</h4>
+      <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem;">sudo dnsspoof -i eth0 -f spoof_hosts.txt</code><br><br>
+      <p style="margin:0;font-size:.88rem;">
+        Places the network interface in promiscuous mode, listening for outbound DNS queries (UDP port 53).
+        When the victim's query is detected, a forged response is injected before the legitimate reply
+        arrives — a classic race condition exploit.
+      </p>
+    </div>
+  </div>
+
+  <h3>Attack Terminal Simulation — Live Playback</h3>
+  <img class="screenshot" src="report_assets/s2_terminals.png" alt="Attack terminal showing dnsspoof logs"/>
+  <div class="screenshot-caption">Fig 2.1 — Animated terminals replaying attacker's Kali Linux session (dnsspoof active)</div>
+
+  <h3>Malicious Webpage Served to Victim</h3>
+  <img class="screenshot" src="report_assets/s2_spoofed.png" alt="Spoofed malicious webpage"/>
+  <div class="screenshot-caption">Fig 2.2 — The attacker's web server serving the spoofed page to the victim's browser</div>
+
+  <div class="card" style="background:#fff8f8;border-color:#fcc;">
+    <h3 style="border-left-color:var(--red);margin-top:0;">HTTP Server Access Log (Confirming Victim Connection)</h3>
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.82rem;display:block;line-height:2;color:#c62828;">
+      192.168.1.10 - - [25/Mar/2026 14:32:01] "GET / HTTP/1.1" 200 -<br>
+      192.168.1.10 - - [25/Mar/2026 14:32:01] "GET /favicon.ico HTTP/1.1" 404 -
+    </code>
+    <p style="margin:0.75rem 0 0;font-size:.88rem;">
+      The victim's IP (192.168.1.10) is visible in the attacker's HTTP access log, confirming a successful redirection.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       §3  VICTIM LOGS
+  ───────────────────────────────────────────── -->
+  <div id="s3" class="section-header">
+    <span class="sect-num">§3</span>
+    <h2>Simulated Victim Logs — 192.168.1.10 (Windows 10)</h2>
+  </div>
+
+  <div class="card">
+    <p>
+      From the victim's perspective, normal commands are issued — but the results reveal the attack's success.
+      The DNS resolution for <code style="font-family:'JetBrains Mono',monospace;">test.local</code> returns the
+      attacker's IP instead of any legitimate server.
+    </p>
+  </div>
+
+  <h3>DNS Resolution — Ping Command (Before Defence)</h3>
+  <img class="screenshot" src="report_assets/s3_victim_logs.png" alt="Victim ping and browser logs"/>
+  <div class="screenshot-caption">Fig 3.1 — Victim's ping resolving test.local to attacker's IP 192.168.1.50</div>
+
+  <div class="card" style="background:#fff8f8;border-color:#fcc;">
+    <h3 style="border-left-color:var(--red);margin-top:0;">Browser Network Console Log (Before Defence)</h3>
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.82rem;display:block;line-height:2.2;color:#333;">
+      Request URL: <span style="color:var(--red);">http://test.local/</span><br>
+      Request Method: GET<br>
+      Status Code: <span style="color:var(--red);">200 OK</span><br>
+      Remote Address: <span style="color:var(--red);font-weight:bold;">192.168.1.50:80</span> ← Attacker's Server<br>
+      Server: SimpleHTTP/0.6 Python/3.11.2<br>
+      Date: Wed, 25 Mar 2026 14:32:01 GMT
+    </code>
+  </div>
+
+  <h3>Observation</h3>
+  <img class="screenshot" src="report_assets/s3_observation.png" alt="Observation callout after victim logs"/>
+  <div class="screenshot-caption">Fig 3.2 — Post-playback observation callout confirming spoofing was successful</div>
+
+  <div class="callout callout-red">
+    <h4>⚠ Key Finding</h4>
+    <p style="margin:0;font-size:.9rem;">
+      The victim successfully connected to <strong>192.168.1.50</strong> instead of the legitimate destination.
+      The OS cached the malicious DNS entry, directing all subsequent connections for <code style="font-family:'JetBrains Mono',monospace;">test.local</code>
+      to the attacker's web server. The DNS spoofing attack was <strong>completely successful</strong>.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       §4  DEFENCE
+  ───────────────────────────────────────────── -->
+  <div id="s4" class="section-header">
+    <span class="sect-num">§4</span>
+    <h2>Defence Implementation — DNS-over-HTTPS (DoH)</h2>
+  </div>
+
+  <div class="card">
+    <p>
+      <strong>Objective:</strong> Configure DNS-over-HTTPS (DoH) on the victim's browser to encrypt DNS queries
+      and bypass local-network spoofing. DoH moves DNS resolution from plaintext UDP port 53 to
+      encrypted HTTPS on TCP port 443, routed directly to a trusted resolver.
+    </p>
+  </div>
+
+  <h3>4.1 — Implementation in Google Chrome</h3>
+  <img class="screenshot" src="report_assets/s4_chrome.png" alt="Chrome DoH configuration steps"/>
+  <div class="screenshot-caption">Fig 4.1 — Interactive step-by-step DoH configuration guide for Google Chrome</div>
+
+  <div class="card">
+    <ul class="steps">
+      <li class="step"><div class="step-num">1</div><div class="step-text">Open Chrome → <strong>Settings → Privacy and Security → Security</strong></div></li>
+      <li class="step"><div class="step-num">2</div><div class="step-text">Scroll to the <strong>Advanced</strong> section</div></li>
+      <li class="step"><div class="step-num">3</div><div class="step-text">Locate <strong>"Use secure DNS"</strong> and toggle it <strong>ON</strong></div></li>
+      <li class="step"><div class="step-num">4</div><div class="step-text">Select <strong>Cloudflare (1.1.1.1)</strong> or <strong>Google (Public DNS)</strong></div></li>
+      <li class="step"><div class="step-num">5</div><div class="step-text">Restart the browser to apply changes ✅</div></li>
+    </ul>
+  </div>
+
+  <h3>4.2 — Implementation in Mozilla Firefox</h3>
+  <img class="screenshot" src="report_assets/s4_firefox.png" alt="Firefox DoH configuration steps"/>
+  <div class="screenshot-caption">Fig 4.2 — Interactive DoH configuration guide for Mozilla Firefox</div>
+
+  <div class="card">
+    <ul class="steps">
+      <li class="step"><div class="step-num">1</div><div class="step-text">Open Firefox → <strong>Settings → General → Network Settings → Settings…</strong></div></li>
+      <li class="step"><div class="step-num">2</div><div class="step-text">Scroll to the bottom of the Connection Settings dialog</div></li>
+      <li class="step"><div class="step-num">3</div><div class="step-text">Check <strong>"Enable DNS over HTTPS"</strong></div></li>
+      <li class="step"><div class="step-num">4</div><div class="step-text">Select provider — Cloudflare: <code>https://mozilla.cloudflare-dns.com/dns-query</code></div></li>
+      <li class="step"><div class="step-num">5</div><div class="step-text">Click <strong>OK</strong> and restart Firefox ✅</div></li>
+    </ul>
+  </div>
+
+  <h3>4.3 — Verification</h3>
+  <img class="screenshot" src="report_assets/s4_verify.png" alt="DoH verification table"/>
+  <div class="screenshot-caption">Fig 4.3 — Verification result and DoH query flow terminal</div>
+
+  <div class="card">
+    <p>Visit <code style="font-family:'JetBrains Mono',monospace;">https://1.1.1.1/help</code> to confirm DoH is active:</p>
+    <table class="verify-table">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Connected to 1.1.1.1</td><td class="yes">Yes ✓</td></tr>
+        <tr><td>Using DNS over HTTPS (DoH)</td><td class="yes">Yes ✓</td></tr>
+        <tr><td>Using DNS over TLS (DoT)</td><td class="no">No ✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       §5  COMPARISON REPORT
+  ───────────────────────────────────────────── -->
+  <div id="s5" class="section-header">
+    <span class="sect-num">§5</span>
+    <h2>Comparison Report: Before Defence vs After Defence</h2>
+  </div>
+
+  <div class="card">
+    <p>
+      <strong>Executive Summary:</strong> This report analyzes the efficacy of DNS-over-HTTPS (DoH) in mitigating
+      LAN DNS spoofing attacks. In the "Before" scenario the network relied on traditional
+      <strong>plaintext DNS (UDP port 53)</strong>. In the "After" scenario,
+      <strong>cryptographic encapsulation via HTTPS (TCP port 443)</strong> was implemented at the application layer.
+    </p>
+  </div>
+
+  <div class="screenshot-grid">
+    <div class="shot">
+      <img src="report_assets/s5_before.png" alt="Before Defence analysis"/>
+      <div class="shot-caption">Fig 5.1 — Technical analysis: Before Defence (UDP plaintext)</div>
+    </div>
+    <div class="shot">
+      <img src="report_assets/s5_after.png" alt="After Defence analysis"/>
+      <div class="shot-caption">Fig 5.2 — Technical analysis: After Defence (HTTPS encrypted)</div>
+    </div>
+  </div>
+
+  <h3>Technical Analysis: Before Defence</h3>
+  <div class="callout callout-red">
+    <h4>Attack Mechanism</h4>
+    <p style="margin:0;font-size:.9rem;line-height:1.8;">
+      Standard DNS queries are transmitted as <strong>unencrypted UDP packets</strong> lacking any authentication or
+      integrity verification. The attacker, operating in promiscuous mode on the same LAN segment, observed the victim's query
+      for <code style="font-family:'JetBrains Mono',monospace;">test.local</code> in real-time and injected a forged
+      response (<code style="font-family:'JetBrains Mono',monospace;">192.168.1.50</code>) before the legitimate reply arrived from 8.8.8.8.
+      The victim's OS accepted the first response received, cached the malicious mapping, and all subsequent connections
+      were directed to the attacker's web server — complete compromise of the name resolution process.
+    </p>
+  </div>
+
+  <h3>Technical Analysis: After Defence</h3>
+  <div class="callout callout-green">
+    <h4>DoH Protection</h4>
+    <p style="margin:0;font-size:.9rem;line-height:1.8;">
+      With DoH enabled, the browser established an <strong>encrypted TLS 1.3 tunnel</strong> directly to Cloudflare's resolver (1.1.1.1).
+      The query was encapsulated in an HTTPS POST request to
+      <code style="font-family:'JetBrains Mono',monospace;">https://cloudflare-dns.com/dns-query</code> over TCP port 443.
+      The <code style="font-family:'JetBrains Mono',monospace;">dnsspoof</code> tool reported <strong>zero pattern matches</strong> —
+      no plaintext DNS traffic traversed the network. The victim was completely immune to local-network manipulation.
+    </p>
+  </div>
+
+  <h3>Why the Defence Was Effective — Three Technical Factors</h3>
+  <div class="factor-grid">
+    <div class="factor-card">
+      <div class="factor-icon">🔐</div>
+      <div class="factor-title">Encryption</div>
+      <div class="factor-desc">Domain names are encrypted within the TLS payload. Network capture reveals only opaque HTTPS traffic — no actionable intelligence for the attacker.</div>
+    </div>
+    <div class="factor-card">
+      <div class="factor-icon">🛡️</div>
+      <div class="factor-title">Integrity Protection</div>
+      <div class="factor-desc">TLS provides cryptographic message authentication (HMAC). Any injected malicious data causes MAC failures, terminating the connection immediately.</div>
+    </div>
+    <div class="factor-card">
+      <div class="factor-icon">🌐</div>
+      <div class="factor-title">Trust Boundary Relocation</div>
+      <div class="factor-desc">DoH bypasses the local router's DNS configuration entirely, moving trust from the untrusted LAN to a known, authenticated remote endpoint.</div>
+    </div>
+  </div>
+
+  <h3>Comparative Results Table</h3>
+  <img class="screenshot" src="report_assets/s5_table.png" alt="Comparison table screenshot"/>
+  <div class="screenshot-caption">Fig 5.3 — Before vs After Defence comparison table in the interactive web app</div>
+
+  <div class="card" style="padding:0;overflow:hidden;margin-top:1rem;">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>⚠ Before Defence</th>
+          <th>✓ After Defence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="metric">DNS Protocol</td><td class="before">UDP (Plaintext)</td><td class="after">HTTPS (Encrypted)</td></tr>
+        <tr><td class="metric">Port Used</td><td class="before">53</td><td class="after">443</td></tr>
+        <tr><td class="metric">Attacker Visibility</td><td class="before">Full query content</td><td class="after">Encrypted traffic only</td></tr>
+        <tr><td class="metric">Spoofing Successful</td><td class="before">Yes</td><td class="after">No</td></tr>
+        <tr><td class="metric">Resolution of test.local</td><td class="before">192.168.1.50 (Spoofed)</td><td class="after">NXDOMAIN or Legitimate IP</td></tr>
+        <tr><td class="metric">Data Integrity</td><td class="before">None</td><td class="after">TLS MAC Verification</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       CONCLUSION
+  ───────────────────────────────────────────── -->
+  <div id="conclusion" class="conclusion">
+    <h3>Conclusion</h3>
+    <p>
+      The implementation of DNS-over-HTTPS represents an effective application-layer defence against local-network DNS spoofing attacks.
+      By encrypting queries and authenticating responses through TLS, DoH eliminates the attacker's ability to <strong>observe</strong>,
+      <strong>intercept</strong>, or <strong>modify</strong> DNS traffic.
+    </p>
+    <p>
+      The attack demonstrated here exploits a fundamental weakness in the original DNS design: its complete lack of
+      authentication and confidentiality. The <code style="font-family:'JetBrains Mono',monospace;">dnsspoof</code> tool
+      succeeds by racing against the legitimate server response — a trivial task on a shared LAN segment.
+    </p>
+    <p style="margin-bottom:0;">
+      Organizations and individual users should consider enabling DoH as a baseline security measure, particularly on
+      <strong>untrusted network segments</strong> such as public Wi-Fi or shared corporate networks. The browser-level
+      implementation requires no administrative privileges and provides immediate protection.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────────────────────
+       REFERENCES
+  ───────────────────────────────────────────── -->
+  <div id="refs" class="section-header">
+    <span class="sect-num">§REF</span>
+    <h2>References</h2>
+  </div>
+
+  <div class="card">
+    <ul class="ref-list">
+      <li class="ref-item"><span class="ref-num">1</span>RFC 8484 — DNS Queries over HTTPS (DoH), IETF, 2018</li>
+      <li class="ref-item"><span class="ref-num">2</span>Cloudflare DNS Documentation — https://developers.cloudflare.com/1.1.1.1/</li>
+      <li class="ref-item"><span class="ref-num">3</span>Mozilla Firefox DNS-over-HTTPS Implementation Guide — https://support.mozilla.org/en-US/kb/dns-over-https-doh-faqs</li>
+      <li class="ref-item"><span class="ref-num">4</span>OWASP DNS Spoofing Prevention Guidelines — https://owasp.org/</li>
+      <li class="ref-item"><span class="ref-num">5</span>dsniff / dnsspoof Tool Documentation — Dug Song, 2000</li>
+    </ul>
+  </div>
+
+</div><!-- /.page -->
+
+<div class="report-footer">
+  DNS Spoofing Lab Report &nbsp;·&nbsp; Lab 4, Project 3 &nbsp;·&nbsp; Instructor: Ishrat Jabeen &nbsp;·&nbsp; March 25, 2026
+</div>
+
+</body>
+</html>
